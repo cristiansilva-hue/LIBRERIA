@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Textura brillantes – Librería Josue</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:#8e1fad;font-family:"Arial Black",Arial,sans-serif;color:#000;display:flex;flex-direction:column;align-items:center;gap:14px;padding:18px 12px}
+.pill{background:#ffc74f;border:6px solid #000;border-radius:40px;padding:10px 34px;font-size:clamp(18px,5vw,30px);letter-spacing:.5px}
+canvas{width:100%;max-width:560px;height:auto;touch-action:none;cursor:grab}
+p{margin:0;color:#fff;font-family:Arial,sans-serif;font-size:15px;text-align:center}
+</style>
+</head>
+<body>
+<div class="pill">TEXTURA BRILLANTES</div>
+<canvas id="c" width="600" height="600"></canvas>
+<p>Pasa el dedo o el mouse sobre las lentejuelas: cambian de color. Si no tocas nada, la mano lo hace sola.</p>
+<script>
+const cv=document.getElementById('c'),ctx=cv.getContext('2d');
+const dpr=Math.min(window.devicePixelRatio||1,2);cv.width=600*dpr;cv.height=600*dpr;ctx.scale(dpr,dpr);
+const WX=105,WY=215,WW=390,WH=290;
+const seq=[];
+for(let r=0,y=WY+8;y<WY+WH;r++,y+=17){for(let x=WX+(r%2?11:0);x<WX+WW+10;x+=22){seq.push({x,y,p:0,t:0,h:Math.random()*30})}}
+let tip={x:300,y:360},prev={x:300,y:360},lastUser=-1e9,user=false;
+function pos(e){const b=cv.getBoundingClientRect();return{x:(e.clientX-b.left)*600/b.width,y:(e.clientY-b.top)*600/b.height}}
+cv.addEventListener('pointerdown',e=>{user=true;cv.setPointerCapture(e.pointerId);tip=pos(e);prev={...tip};lastUser=performance.now()});
+cv.addEventListener('pointermove',e=>{if(!user&&e.pointerType!=='mouse')return;tip=pos(e);lastUser=performance.now()});
+cv.addEventListener('pointerup',()=>{user=false});
+function rr(x,y,w,h,r){ctx.beginPath();ctx.roundRect(x,y,w,h,r)}
+function cover(){
+ ctx.fillStyle='#000';rr(40,40,520,540,26);ctx.fill();
+ ctx.fillStyle='#ff2d8a';rr(48,48,504,524,22);ctx.fill();
+ ctx.fillStyle='#ffc0dc';for(let i=0;i<14;i++){ctx.beginPath();ctx.arc(70+i*38,70+(i%3)*14,3,0,7);ctx.fill()}
+ ctx.textAlign='center';ctx.font='900 58px Arial Black,Arial,sans-serif';
+ ctx.lineWidth=8;ctx.strokeStyle='#fff';ctx.strokeText('Amigos',300,142);ctx.fillStyle='#19b4e6';ctx.fillText('Amigos',300,142);
+ ctx.font='900 30px Arial Black,Arial,sans-serif';ctx.fillStyle='#fff';ctx.fillText('brillantes',300,184);
+ ctx.fillStyle='#fff';rr(WX-10,WY-10,WW+20,WH+20,90);ctx.fill();
+}
+function sequins(){
+ ctx.save();rr(WX,WY,WW,WH,80);ctx.clip();
+ ctx.fillStyle='#222';ctx.fillRect(WX,WY,WW,WH);
+ for(const s of seq){
+  const w=Math.abs(Math.cos(Math.PI*s.p))*13+.6,back=s.p>.5;
+  const g=ctx.createRadialGradient(s.x-3,s.y-3,1,s.x,s.y,14);
+  const hue=back?320+s.h:178+s.h;
+  g.addColorStop(0,`hsl(${hue},85%,72%)`);g.addColorStop(1,`hsl(${hue},75%,32%)`);
+  ctx.fillStyle=g;ctx.beginPath();ctx.ellipse(s.x,s.y,w,12,0,0,7);ctx.fill();
+  ctx.strokeStyle='rgba(0,0,0,.35)';ctx.lineWidth=1;ctx.stroke();
+ }
+ ctx.restore();
+}
+function hand(x,y,a){
+ ctx.save();ctx.translate(x,y);ctx.rotate(a);
+ ctx.lineWidth=4;ctx.strokeStyle='#000';ctx.fillStyle='#f4b896';
+ rr(-18,-6,36,120,18);ctx.fill();ctx.stroke();
+ for(const dx of[-40,-4+0,32]){if(dx===-4)continue;rr(dx-14,40,28,100,14);ctx.fill();ctx.stroke()}
+ ctx.beginPath();ctx.ellipse(0,170,62,60,0,0,7);ctx.fill();ctx.stroke();
+ rr(-18,-6,36,120,18);ctx.fill();ctx.stroke();
+ ctx.fillStyle='#fff';ctx.globalAlpha=.55;ctx.beginPath();ctx.ellipse(0,10,8,5,0,0,7);ctx.fill();
+ ctx.restore();
+}
+function price(){
+ ctx.fillStyle='#ffc74f';ctx.strokeStyle='#000';ctx.lineWidth=6;
+ ctx.beginPath();ctx.ellipse(470,535,66,36,0,0,7);ctx.fill();ctx.stroke();
+ ctx.fillStyle='#000';ctx.textAlign='center';ctx.font='900 22px Arial Black,Arial,sans-serif';ctx.fillText('s/ 26',470,545);
+}
+let T=0;
+function frame(){
+ T+=.016;
+ const auto=performance.now()-lastUser>2500;
+ if(auto){tip={x:300+Math.sin(T*1.1)*150,y:370+Math.sin(T*2.3)*50}}
+ const dx=tip.x-prev.x;
+ if(Math.abs(dx)>.3){for(const s of seq){if(Math.hypot(s.x-tip.x,s.y-tip.y)<48)s.t=dx>0?1:0}}
+ for(const s of seq){s.p+=(s.t-s.p)*.18}
+ ctx.clearRect(0,0,600,600);
+ cover();sequins();price();
+ hand(tip.x+4,tip.y+4,-.45+Math.max(-.15,Math.min(.15,dx*.01)));
+ prev={...tip};
+ requestAnimationFrame(frame);
+}
+frame();
+</script>
+</body>
+</html>
